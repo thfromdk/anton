@@ -1,0 +1,4 @@
+digital_score,financial_activity,engagement,income_weight,employment_score,anton_score,risk_band,explanation
+2,3,1,0.75,0.8,0.41,Medium,High mobile activity; Frequent financial transactions; Upper income tier; Stable employment
+0,1,2,0.25,0.5,0.35,High,
+3,4,2,1.0,1.0,0.84,Low,High mobile activity; Frequent financial transactions; Upper income tier; Stable employment

@@ -13,7 +13,7 @@ REQUIRED_COLUMNS = [
 
 st.set_page_config(page_title="Anton Credit Scoring", layout="centered")
 st.title("Anton — Adaptive Credit Scoring")
-st.caption("Designed for imperfect data. Built for the real world.")
+st.caption("Built for imperfect data. Trusted in the real world.")
 
 st.markdown("---")
 
@@ -24,7 +24,7 @@ st.markdown("---")
 st.header("📍 Single User Scoring")
 
 with st.form("single_user_form"):
-    st.write("Fill out what you know. Leave others blank.")
+    st.write("Fill out what you know. Leave others blank — Anton adapts.")
 
     input_dict = {}
 
@@ -61,11 +61,13 @@ with st.form("single_user_form"):
         risk_band = "Low" if score > 0.7 else "Medium" if score > 0.4 else "High"
         band_color = "🟢" if risk_band == "Low" else "🟡" if risk_band == "Medium" else "🔴"
 
-        st.metric(label="Anton Score", value=f"{round(score, 2)}")
+        st.subheader("🔎 Anton Result")
+        st.metric(label="Adjusted Credit Score", value=f"{round(score, 2)}")
         st.write(f"**Risk Band:** {band_color} {risk_band}")
-        st.write(f"**Confidence:** {confidence}")
+        st.write(f"**Confidence Level:** {confidence}")
 
         with st.expander("🧠 Explanation"):
+            st.markdown("Anton scored this user based on available inputs. Here's why:")
             for line in explanation:
                 st.markdown(f"- {line}")
 

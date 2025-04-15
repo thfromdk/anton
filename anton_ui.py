@@ -12,8 +12,8 @@ REQUIRED_COLUMNS = [
 ]
 
 st.set_page_config(page_title="Anton Credit Scoring", layout="centered")
-st.title("Anton — Alternative Credit Scoring Demo")
-st.caption("Helping the financially invisible be seen.")
+st.title("Anton — Adaptive Credit Scoring")
+st.caption("Designed for imperfect data. Built for the real world.")
 
 st.markdown("---")
 
@@ -24,52 +24,50 @@ st.markdown("---")
 st.header("📍 Single User Scoring")
 
 with st.form("single_user_form"):
-    st.write("Use the sliders below to simulate an individual user's behavior.")
+    st.write("Fill out what you know. Leave others blank.")
 
-    digital_score = st.slider(
-        "Digital Score",
-        0.0, 3.0, 1.0,
-        help="How digitally active is this user? Higher = more mobile payments, app use, etc."
+    input_dict = {}
+
+    input_dict["digital_score"] = st.slider(
+        "Digital Score", 0.0, 3.0, 1.0,
+        help="How digitally active is this user? Higher = more mobile/app activity."
     )
 
-    financial_activity = st.slider(
-        "Financial Activity",
-        0.0, 4.0, 2.0,
-        help="Savings, borrowing, paying bills — how financially active are they?"
+    input_dict["financial_activity"] = st.slider(
+        "Financial Activity", 0.0, 4.0, 2.0,
+        help="Savings, borrowing, utility payments, etc."
     )
 
-    engagement = st.slider(
-        "Engagement",
-        0.0, 3.0, 1.0,
-        help="How much does this person engage in other economic behaviors? (remittances, pensions, etc.)"
+    input_dict["engagement"] = st.slider(
+        "Engagement", 0.0, 3.0, 1.0,
+        help="Remittances, pensions, agriculture transactions."
     )
 
-    income_weight = st.slider(
-        "Income Weight",
-        0.0, 1.0, 0.5,
-        help="Relative income level (based on quintiles or inferred signals)"
+    input_dict["income_weight"] = st.slider(
+        "Income Weight", 0.0, 1.0, 0.5,
+        help="Scaled income level (0.25 = low, 1.0 = top)."
     )
 
-    employment_score = st.slider(
-        "Employment Score",
-        0.0, 1.0, 0.5,
-        help="Stability of employment, if known (binary, inferred, or estimated)"
+    input_dict["employment_score"] = st.slider(
+        "Employment Score", 0.0, 1.0, 0.5,
+        help="Inferred employment stability (0 = none, 1 = stable)."
     )
 
     submitted = st.form_submit_button("Score User")
 
     if submitted:
-        features = [digital_score, financial_activity, engagement, income_weight, employment_score]
-        score, explanation = score_user(features)
+        score, confidence, explanation = score_user(input_dict)
+
         risk_band = "Low" if score > 0.7 else "Medium" if score > 0.4 else "High"
         band_color = "🟢" if risk_band == "Low" else "🟡" if risk_band == "Medium" else "🔴"
 
         st.metric(label="Anton Score", value=f"{round(score, 2)}")
-        st.markdown(f"**Risk Band:** {band_color} {risk_band}")
+        st.write(f"**Risk Band:** {band_color} {risk_band}")
+        st.write(f"**Confidence:** {confidence}")
 
-        with st.expander("See explanation"):
-            for reason in explanation:
-                st.markdown(f"- {reason}")
+        with st.expander("🧠 Explanation"):
+            for line in explanation:
+                st.markdown(f"- {line}")
 
 st.markdown("---")
 
@@ -80,7 +78,7 @@ st.markdown("---")
 st.header("📁 Batch Scoring (CSV Upload)")
 
 with st.expander("What should the file look like?"):
-    st.markdown("You need a CSV with **these 5 columns**:")
+    st.markdown("You need a CSV with **these 5 columns** — or as many as you can provide:")
     st.code(", ".join(REQUIRED_COLUMNS), language="csv")
 
     sample_data = pd.DataFrame([{
@@ -99,29 +97,28 @@ if uploaded_file:
     try:
         df = pd.read_csv(uploaded_file)
 
-        if not all(col in df.columns for col in REQUIRED_COLUMNS):
-            st.error(f"❌ CSV must contain these columns: {', '.join(REQUIRED_COLUMNS)}")
-        else:
-            df["anton_score"] = None
-            df["risk_band"] = None
-            df["explanation"] = None
+        df["anton_score"] = None
+        df["confidence"] = None
+        df["risk_band"] = None
+        df["explanation"] = None
 
-            for idx, row in df.iterrows():
-                features = [row[col] for col in REQUIRED_COLUMNS]
-                score, explanation = score_user(features)
-                df.at[idx, "anton_score"] = round(score, 2)
-                df.at[idx, "risk_band"] = "Low" if score > 0.7 else "Medium" if score > 0.4 else "High"
-                df.at[idx, "explanation"] = "; ".join(explanation)
+        for idx, row in df.iterrows():
+            row_dict = {key: row[key] if key in df.columns else None for key in REQUIRED_COLUMNS}
+            score, confidence, explanation = score_user(row_dict)
+            df.at[idx, "anton_score"] = round(score, 2)
+            df.at[idx, "confidence"] = confidence
+            df.at[idx, "risk_band"] = "Low" if score > 0.7 else "Medium" if score > 0.4 else "High"
+            df.at[idx, "explanation"] = "; ".join(explanation)
 
-            st.success("✅ Scoring complete. Preview below:")
-            st.dataframe(df)
+        st.success("✅ Scoring complete. Preview below:")
+        st.dataframe(df)
 
-            st.download_button(
-                label="Download Scored CSV",
-                data=df.to_csv(index=False).encode('utf-8'),
-                file_name="scored_users.csv",
-                mime="text/csv"
-            )
+        st.download_button(
+            label="Download Scored CSV",
+            data=df.to_csv(index=False).encode('utf-8'),
+            file_name="scored_users.csv",
+            mime="text/csv"
+        )
 
     except Exception as e:
         st.error(f"Something went wrong while processing the file. Details: {e}")

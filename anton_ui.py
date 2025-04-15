@@ -13,9 +13,26 @@ REQUIRED_COLUMNS = [
 
 st.set_page_config(page_title="Anton Credit Scoring", layout="centered")
 st.title("Anton — Adaptive Credit Scoring")
-st.caption("Built for imperfect data. Trusted in the real world.")
+st.caption("One engine. Multiple priorities. Trusted anywhere.")
 
 st.markdown("---")
+
+# ================================
+# Scoring Profile Selector
+# ================================
+st.sidebar.title("⚙️ Scoring Profile")
+profile_option = st.sidebar.radio(
+    "Choose scoring mode:",
+    ("core", "lite", "custom")
+)
+
+custom_weights = {
+    "digital_score": 2.0,
+    "financial_activity": 1.0,
+    "engagement": 0.5,
+    "income_weight": 1.2,
+    "employment_score": 0.8
+} if profile_option == "custom" else None
 
 # ================================
 # SINGLE USER SCORING
@@ -56,7 +73,11 @@ with st.form("single_user_form"):
     submitted = st.form_submit_button("Score User")
 
     if submitted:
-        score, confidence, explanation = score_user(input_dict)
+        score, confidence, explanation = score_user(
+            input_dict,
+            profile=profile_option,
+            custom_weights=custom_weights
+        )
 
         risk_band = "Low" if score > 0.7 else "Medium" if score > 0.4 else "High"
         band_color = "🟢" if risk_band == "Low" else "🟡" if risk_band == "Medium" else "🔴"
@@ -67,7 +88,6 @@ with st.form("single_user_form"):
         st.write(f"**Confidence Level:** {confidence}")
 
         with st.expander("🧠 Explanation"):
-            st.markdown("Anton scored this user based on available inputs. Here's why:")
             for line in explanation:
                 st.markdown(f"- {line}")
 
@@ -106,7 +126,11 @@ if uploaded_file:
 
         for idx, row in df.iterrows():
             row_dict = {key: row[key] if key in df.columns else None for key in REQUIRED_COLUMNS}
-            score, confidence, explanation = score_user(row_dict)
+            score, confidence, explanation = score_user(
+                row_dict,
+                profile=profile_option,
+                custom_weights=custom_weights
+            )
             df.at[idx, "anton_score"] = round(score, 2)
             df.at[idx, "confidence"] = confidence
             df.at[idx, "risk_band"] = "Low" if score > 0.7 else "Medium" if score > 0.4 else "High"
